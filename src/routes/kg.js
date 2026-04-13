@@ -85,12 +85,19 @@ router.post('/students', (req, res) => {
 });
 
 router.put('/students/:id', (req, res) => {
+  const kgId = getKgId(req);
   const { name, age, emoji, classroom_id } = req.body;
+  const stu = db.prepare('SELECT s.id FROM students s JOIN classrooms c ON c.id=s.classroom_id WHERE s.id=? AND c.kindergarten_id=?').get(req.params.id, kgId);
+  if (!stu) return res.status(403).json({ success: false, message: '접근 권한이 없습니다.' });
   db.prepare('UPDATE students SET name=?,age=?,emoji=?,classroom_id=? WHERE id=?').run(name, age, emoji, classroom_id, req.params.id);
   res.json({ success: true });
 });
 
 router.delete('/students/:id', (req, res) => {
+  const kgId = getKgId(req);
+  const stu = db.prepare('SELECT s.id FROM students s JOIN classrooms c ON c.id=s.classroom_id WHERE s.id=? AND c.kindergarten_id=?').get(req.params.id, kgId);
+  if (!stu) return res.status(403).json({ success: false, message: '접근 권한이 없습니다.' });
+  db.prepare('DELETE FROM family_members WHERE student_id=?').run(req.params.id);
   db.prepare('DELETE FROM students WHERE id=?').run(req.params.id);
   res.json({ success: true });
 });
@@ -169,8 +176,11 @@ router.get('/broadcast-logs', (req, res) => {
 // ── 방송 설정 ─────────────────────────────────────────────────
 router.get('/broadcast-settings', (req, res) => {
   const kgId = getKgId(req);
-  const rows = db.prepare('SELECT * FROM broadcast_settings WHERE kindergarten_id=?').all(kgId);
-  res.json({ success: true, data: rows });
+  const classrooms = db.prepare('SELECT * FROM classrooms WHERE kindergarten_id=? ORDER BY id').all(kgId);
+  const settings   = db.prepare('SELECT * FROM broadcast_settings WHERE kindergarten_id=?').all(kgId);
+  const defaultMent = settings.find(s=>s.classroom_id==null)?.default_ment || '{반} {이름} 학부모님, 하원 준비해 주세요';
+  const noticeMins  = settings.find(s=>s.classroom_id==null)?.notice_minutes || 10;
+  res.json({ success: true, data: { classrooms, settings, defaultMent, noticeMins } });
 });
 
 router.put('/broadcast-settings', (req, res) => {
