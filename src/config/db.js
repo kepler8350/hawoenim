@@ -74,7 +74,7 @@ db.exec(`
     classroom_id     INTEGER REFERENCES classrooms(id) ON DELETE CASCADE,
     notice_minutes   INTEGER DEFAULT 10,
     start            TEXT    DEFAULT '14:00',
-    end              TEXT    DEFAULT '17:00',
+    end_time         TEXT    DEFAULT '17:00',
     gap              INTEGER DEFAULT 30,
     times            TEXT,
     default_ment     TEXT    DEFAULT '{반} {이름} 학부모님, 하원 준비해 주세요',
@@ -106,10 +106,10 @@ db.exec(`
   );
 `);
 
+// broadcast_settings 컬럼 마이그레이션
+try { db.exec("ALTER TABLE broadcast_settings ADD COLUMN start TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE broadcast_settings ADD COLUMN end_time TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE broadcast_settings ADD COLUMN gap INTEGER"); } catch(e) {}
+try { db.exec("ALTER TABLE broadcast_settings ADD COLUMN times TEXT"); } catch(e) {}
 
-// ── broadcast_settings 컬럼 마이그레이션 ──
-['start','end','gap','times'].forEach(col => {
-  try { db.exec('ALTER TABLE broadcast_settings ADD COLUMN '+col+' TEXT'); } catch(e) {}
-});
-try { db.exec('ALTER TABLE broadcast_settings ADD COLUMN gap INTEGER DEFAULT 30'); } catch(e) {}
 module.exports = db;
